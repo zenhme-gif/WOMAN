@@ -57,6 +57,8 @@ def words(F, y0, y1, gap=14):
     for li, L in enumerate(lines):
         bigs = L['m']
         core_line_top = int(np.median([st[i, 1] for i in L['m'] if i in big]))
+        core_t_l = core_line_top; core_b_l = float(np.median([st[i, 1] + st[i, 3] for i in L['m'] if i in big]))
+        core_h_l = core_b_l - core_t_l
         col = np.zeros(F.shape[1], bool)
         for i in bigs: col[st[i, 0]:st[i, 0] + st[i, 2]] = True
         # كلمات: فراغات أفقية بين المكوّنات الكبيرة لا تقل عن gap
@@ -78,10 +80,13 @@ def words(F, y0, y1, gap=14):
             cx = st[i, 0] + st[i, 2] / 2                    # الكلمة داخل السطر بموضعها الأفقي
             inside = [k for k, s in enumerate(segs) if s[0] - 3 <= cx <= s[1] + 3]
             if len(inside) == 1: groups[inside[0]].append(i); continue
-            # بين كلمتين: تتبع الكلمة التي على يمينها (السابقة في القراءة)، كالفاصلة وضمة آخر الكلمة
+            # بين كلمتين: الحركة (فوق السطر أو تحته) تتبع أقرب كلمة أفقياً،
+            # وعلامة الترقيم على السطر (كالفاصلة) تتبع الكلمة التي على يمينها (السابقة في القراءة)
+            cy = st[i, 1] + st[i, 3] / 2
+            on_line = core_t_l + 0.35 * core_h_l <= cy <= core_b_l + 4
             right = [(s[0] - cx, k) for k, s in enumerate(segs) if s[0] >= cx]
-            if right: groups[min(right)[1]].append(i)
-            else: groups[int(np.argmin([abs(cx - s[1]) for s in segs]))].append(i)
+            if on_line and right: groups[min(right)[1]].append(i)
+            else: groups[int(np.argmin([min(abs(cx - s[0]), abs(cx - s[1])) for s in segs]))].append(i)
         for k in reversed(range(len(segs))):          # من اليمين
             g = groups[k]
             if not g: continue

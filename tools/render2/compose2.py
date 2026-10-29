@@ -41,10 +41,13 @@ def paste(canvas, img, x, y, s, bg, opaque=False, mask=None):
 def wrap(wl, s, width, bg, gap=17):
     """يلف الكلمات (بحركاتها) في أسطر لا يتجاوز عرضها width، محاذاةً على أعلى جسم السطر."""
     items = []
-    for im, a, (X0, Y0), li, ctop in wl:
+    for k, (im, a, (X0, Y0), li, ctop) in enumerate(wl):
         ims = cv2.resize(im, None, fx=s, fy=s, interpolation=cv2.INTER_AREA)
         als = cv2.resize(a, None, fx=s, fy=s, interpolation=cv2.INTER_AREA)
-        items.append((ims, als, (Y0 - ctop) * s))
+        # المسافة الأصلية إلى الكلمة السابقة (يمينها) إن كانتا في سطر واحد من الشريحة
+        og = None
+        if k and wl[k - 1][3] == li: og = (wl[k - 1][2][0] - (X0 + a.shape[1])) * s
+        items.append((ims, als, (Y0 - ctop) * s, og))
     g = int(gap * s)
     # سطر قصير في الأصل (كالحكم «تقضيه») نهايته مقصودة: يبقى سطراً مستقلاً
     lw = {}
@@ -55,9 +58,9 @@ def wrap(wl, s, width, bg, gap=17):
     lines, cur, cw = [], [], 0
     prev_li = None
     for it, (_, _, _, li, _) in zip(items, wl):
-        w = it[0].shape[1]
-        if cur and (cw + g + w > width or (prev_li in hard and li != prev_li)): lines.append(cur); cur, cw = [], 0
-        cw += (g if cur else 0) + w; cur.append(it); prev_li = li
+        w = it[0].shape[1]; gi = it[3] if it[3] is not None else g
+        if cur and (cw + gi + w > width or (prev_li in hard and li != prev_li)): lines.append(cur); cur, cw = [], 0
+        cw += (gi if cur else 0) + w; cur.append(it); prev_li = li
     if cur: lines.append(cur)
     top = min(min(it[2] for it in ln) for ln in lines)
     step = int(max(it[0].shape[0] + it[2] for ln in lines for it in ln) - top + 4 * s)
@@ -65,17 +68,18 @@ def wrap(wl, s, width, bg, gap=17):
     out = np.full((hgt, width, 3), bg, np.uint8); oa = np.zeros((hgt, width), np.float32)
     line_masks = []
     for i, ln in enumerate(lines):
-        tw = sum(it[0].shape[1] for it in ln) + g * (len(ln) - 1)
-        x = (width + tw) // 2
+        gaps = [0] + [(it[3] if it[3] is not None else g) for it in ln[1:]]
+        tw = sum(it[0].shape[1] for it in ln) + sum(gaps)
+        x = (width + tw) / 2
         lm = np.zeros((hgt, width), np.float32)
-        for ims, als, dy in ln:
-            x -= ims.shape[1]
+        for j, (ims, als, dy, _) in enumerate(ln):
+            x -= gaps[j]
+            x -= ims.shape[1]; x = int(round(x))
             y = int(round(i * step + dy - top))
             h, w = als.shape
             reg = (slice(y, y + h), slice(x, x + w))
             out[reg] = (out[reg] * (1 - als[..., None]) + ims * als[..., None]).astype(np.uint8)
             oa[reg] = np.maximum(oa[reg], als); lm[reg] = np.maximum(lm[reg], als)
-            x -= g
         line_masks.append(lm)
     return out, oa, line_masks
 
@@ -153,3 +157,7 @@ if __name__ == '__main__':
     sb, sv = 0.75, 0.75
     # الفرق بين قضاء الصلاة والصوم: الصوم (١) يميناً، والصلاة (٢) يساراً، بترتيب الكلام في الدرس
     print(build('farq', 52, [(53, R, 470, sb, sv, 840), (52, L, 470, sb, sv, 840)], out))
+    # الطواف للحائض: الحكم (١) يميناً، والدليل (٢) يساراً
+    print(build('tawaf', 54, [(54, R, 470, sb, sv, 840), (55, L, 470, sb, sv, 840)], out))
+    # مس المصحف للحائض والنفساء: مس المصحف (١) يميناً، والقراءة من غير مس (٢) يساراً
+    print(build('mushaf', 56, [(56, R, 470, sb, sv, 840), (57, L, 470, sb, sv, 840)], out))
