@@ -1,0 +1,1 @@
+adeclip,highpass=f=80,arnndn=m=models/std.rnnn,equalizer=f=180:t=q:w=1:g=-2,highshelf=f=4500:g=2,deesser,acompressor=threshold=-24dB:ratio=2.5:attack=10:release=200,highpass=f=70
