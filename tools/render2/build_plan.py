@@ -3,7 +3,9 @@ import sys, json, pickle, cv2, numpy as np
 sys.path.insert(0, '.')
 import render2 as R
 S = R.S
-T = {d['page']: d['start'] for d in json.load(open(f'{S}/l2/timings.json'))}
+_TJ = json.load(open(f'{S}/l2/timings.json'))
+T = {d['page']: d['start'] for d in _TJ}
+TITLE = {d['page']: d['title'] for d in _TJ if d.get('title')}
 END = 1063.40                        # نهاية الدرس قبل الخاتمة
 FADE0 = 232.8667                     # بداية الانتقال القديم بعد «الاستخارة للحائض» (قبل «الصوم على الحائض والنفساء»)
 MERGED = {'farq': [53, 52], 'tawaf': [54, 55], 'mushaf': [56, 57]}
@@ -30,7 +32,7 @@ def build():
             hd = R.Header(imgs[0], bg); its = [R.Item(im, bg, k + 1, disk_r=38) for k, im in enumerate(imgs)]
             keep = False
         groups.append(dict(name=g if isinstance(g, str) else f'p{pages[0]}', pages=pages, header=hd, items=its,
-                           starts=[T[n] for n in pages], keep=keep))
+                           starts=[T[n] for n in pages], title=TITLE.get(pages[0]), keep=keep))
         print('built', groups[-1]['name'], flush=True)
     return groups
 
@@ -40,10 +42,11 @@ def timeline(groups):
     tl.ev.append(('fade', FADE0, FADE0 + 1.2)); tl.t = FADE0 + 1.2
     report = []
     for i, G in enumerate(groups):
-        end = groups[i + 1]['starts'][0] if i + 1 < len(groups) else END
+        nx = groups[i + 1] if i + 1 < len(groups) else None
+        end = (nx['title'] or nx['starts'][0]) if nx else END
         n0 = len(tl.ev)
         st = []
-        R.plan_group(tl, G['header'], G['items'], G['starts'], end, keep=G['keep'], next_exists=i + 1 < len(groups), stats=st)
+        R.plan_group(tl, G['header'], G['items'], G['starts'], end, keep=G['keep'], next_exists=i + 1 < len(groups), stats=st, title_at=G['title'])
         G['speed'] = st
         draws = [e for e in tl.ev[n0:] if e[0] == 'draw']
         report.append((G['name'], G['starts'][0], draws[0][1], tl.t, end, G['speed']))

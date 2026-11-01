@@ -294,11 +294,11 @@ def text_nat(st):
 BOXLOG = []
 
 
-def plan_group(tl, header, items, starts, end, keep=True, next_exists=True, stats=None):
+def plan_group(tl, header, items, starts, end, keep=True, next_exists=True, stats=None, title_at=None):
     """مجموعة: لافتة، ثم صناديقها عند أزمنة الكلام، ثم التلوين والثبات والانتقال.
     الرسم يتبع الكلام: كلما تأخر عن الشيخ اختُصر ما ليس نصاً (الإطارات والتلوين والانتقال)
     وأُسرعت الكتابة حتى خمسة أضعاف، فيلحق الرسم بالكلام ولا يتراكم التأخر."""
-    a0 = starts[0]
+    a0 = starts[0] if title_at is None else min(title_at, starts[0])   # يُرسم العنوان حين ينطقه الشيخ
     late = max(0, tl.t - a0)
     hurry0 = late > 1.5 or (len(starts) > 1 and starts[1] - a0 < 12)
     hs = [(header.brackets[0] if header.brackets else None, 0.5, 0.15), (header.banner_loop, 2.4, 0.15),
