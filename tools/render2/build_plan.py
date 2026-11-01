@@ -5,9 +5,9 @@ import render2 as R
 S = R.S
 T = {d['page']: d['start'] for d in json.load(open(f'{S}/l2/timings.json'))}
 END = 1063.40                        # نهاية الدرس قبل الخاتمة
-FADE0 = 261.27                       # بداية الانتقال القديم بعد المجموعة السابقة
+FADE0 = 232.8667                     # بداية الانتقال القديم بعد «الاستخارة للحائض» (قبل «الصوم على الحائض والنفساء»)
 MERGED = {'farq': [53, 52], 'tawaf': [54, 55], 'mushaf': [56, 57]}
-GROUPS = [('farq', None), ('tawaf', None), ('mushaf', None), ([58, 59, 60, 61], None), ([62, 63], None), ([64, 65], None),
+GROUPS = [([50, 51], None), ('farq', None), ('tawaf', None), ('mushaf', None), ([58, 59, 60, 61], None), ([62, 63], None), ([64, 65], None),
           ([66, 67], None), ([68, 69], None), ([70, 71, 72, 73], None), ([74, 75], None), ([77, 78, 79, 80], None),
           ([81, 82], None), ([83, 85, 84], None), ([86, 87, 88, 89], None)]
 

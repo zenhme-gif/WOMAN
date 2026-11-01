@@ -4,7 +4,7 @@ S = '/tmp/claude-0/-home-user-WOMAN/b60cb907-78a5-579e-bd39-853977c0c146/scratch
 CUR = f'{S}/work/lesson2_cur.mp4'; W, H = 1920, 1080
 os.makedirs(f'{S}/r2/seg', exist_ok=True)
 subprocess.run(['ffmpeg', '-loglevel', 'error', '-y', '-i', CUR, '-map', '0:v', '-c', 'copy', '-f', 'segment',
-                '-segment_times', '261.12,1063.35', '-reset_timestamps', '1', '-segment_format', 'mp4', f'{S}/r2/seg/s%d.mp4'], check=True)
+                '-segment_times', '227.80,1063.35', '-reset_timestamps', '1', '-segment_format', 'mp4', f'{S}/r2/seg/s%d.mp4'], check=True)
 def frames(p):
     pr = subprocess.Popen(['ffmpeg', '-loglevel', 'error', '-i', p, '-f', 'rawvideo', '-pix_fmt', 'bgr24', '-'], stdout=subprocess.PIPE)
     while True:
@@ -31,7 +31,7 @@ for k, f in enumerate(outro):
 enc.stdin.close(); enc.wait()
 print('outro weights', ws[:22])
 open(f'{S}/r2/seg/list.txt', 'w').write(''.join(f"file '{p}'\n" for p in
-    [f'{S}/r2/seg/s0.mp4', f'{S}/r2/c1.mp4', f'{S}/r2/c2.mp4', f'{S}/r2/c3.mp4', f'{S}/r2/seg/s2fix.mp4']))
+    [f'{S}/r2/seg/s0.mp4', f'{S}/r2/pA.mp4', f'{S}/r2/c1.mp4', f'{S}/r2/c2.mp4', f'{S}/r2/c3.mp4', f'{S}/r2/seg/s2fix.mp4']))
 subprocess.run(['ffmpeg', '-loglevel', 'error', '-y', '-f', 'concat', '-safe', '0', '-i', f'{S}/r2/seg/list.txt', '-c', 'copy', f'{S}/r2/v.mp4'], check=True)
 subprocess.run(['ffmpeg', '-loglevel', 'error', '-y', '-i', f'{S}/r2/v.mp4', '-i', CUR, '-map', '0:v', '-map', '1:a', '-c', 'copy',
                 '-movflags', '+faststart', '/home/user/WOMAN/lessons/lesson02-taharah-hayd-nifas.mp4'], check=True)

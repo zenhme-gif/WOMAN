@@ -291,38 +291,48 @@ def text_nat(st):
     return max(0.5, (st.x1 - st.x0) / 165.0)
 
 
+BOXLOG = []
+
+
 def plan_group(tl, header, items, starts, end, keep=True, next_exists=True, stats=None):
     """مجموعة: لافتة، ثم صناديقها عند أزمنة الكلام، ثم التلوين والثبات والانتقال.
-    عند التأخر عن الكلام يُختصر ما ليس نصاً (الإطارات والتلوين والانتقال) ويبقى للشرح أكبر وقت ممكن."""
+    الرسم يتبع الكلام: كلما تأخر عن الشيخ اختُصر ما ليس نصاً (الإطارات والتلوين والانتقال)
+    وأُسرعت الكتابة حتى خمسة أضعاف، فيلحق الرسم بالكلام ولا يتراكم التأخر."""
     a0 = starts[0]
     late = max(0, tl.t - a0)
-    hs = [(header.brackets[0] if header.brackets else None, 0.5, 0.2), (header.banner_loop, 2.4, 0.2),
-          (header.brackets[1] if len(header.brackets) > 1 else None, 0.4, 0.2),
-          (header.title, 4.2 if header.two_lines else 3.0, 0.2)]
-    seq(tl, hs, max(2.2, 5.5 - late), earliest=a0 - 0.2, minf=0.3, maxf=0.85)
+    hurry0 = late > 1.5 or (len(starts) > 1 and starts[1] - a0 < 12)
+    hs = [(header.brackets[0] if header.brackets else None, 0.5, 0.15), (header.banner_loop, 2.4, 0.15),
+          (header.brackets[1] if len(header.brackets) > 1 else None, 0.4, 0.15),
+          (header.title, 4.2 if header.two_lines else 3.0, 0.15)]
+    seq(tl, hs, 1.6 if hurry0 else max(2.2, 3.8 - late), earliest=a0 - 0.2, minf=0.22, maxf=0.85)
     for k, (it, a) in enumerate(zip(items, starts)):
         b = starts[k + 1] if k + 1 < len(starts) else end
         last = k + 1 == len(items)
         if k and not keep: tl.clear(items[k - 1].lower, a - 0.5)
         late = max(0, tl.t - a)
-        sub = [(it.ring, 0.6, 0.15), (it.digit, 0.3, 0.1), (it.outline, 2.0, 0.2)] + \
-              [(s, max(0.8, text_nat(s)), 0.1) for s in it.boxtext if s] + [(it.hl, 0.4, 0.1), (it.arrow, 0.3, 0.1)]
-        seq(tl, sub, max(1.6, 3.8 - late), earliest=(a - 0.3), minf=0.35, maxf=0.8)
-        reserve = (3.2 if tl.t < b - 8 else 2.0) if last else 0.4
-        body = [(s, max(1.8, text_nat(s)), 0.25) for s in it.lines if s]
+        window = b - max(a, tl.t)                                   # ما بقي من كلام الشيخ في هذا المربع
+        tight = late > 1.0 or window < 10
+        sub = [(it.ring, 0.6, 0.1), (it.digit, 0.3, 0.08), (it.outline, 2.0, 0.12)] + \
+              [(s, max(0.8, text_nat(s)), 0.08) for s in it.boxtext if s] + [(it.hl, 0.4, 0.08), (it.arrow, 0.3, 0.08)]
+        n_ev = len(tl.ev)
+        seq(tl, sub, 1.1 if tight else max(1.9, 3.8 - late), earliest=(a - 0.3), minf=0.22, maxf=0.8)
+        d0 = [e[1] for e in tl.ev[n_ev:] if e[0] == 'draw']
+        BOXLOG.append((a, d0[0] if d0 else None))
+        reserve = (2.6 if tl.t < b - 8 else 1.6) if last else 0.3
+        body = [(s, max(1.8, text_nat(s)), 0.15 if tight else 0.25) for s in it.lines if s]
         nat = sum(x[1] for x in body)
         budget = (b - reserve - tl.t) * 0.95
-        seq(tl, body, budget, earliest=tl.t, minf=0.4, maxf=1.0)
+        seq(tl, body, budget, earliest=tl.t, minf=0.2, maxf=1.0)
         if stats is not None and body:
             gaps = sum(x[2] for x in body)
-            stats.append(float(np.clip((budget - gaps) / nat, 0.4, 1.0)) if budget > 0 else 0.4)
+            stats.append(float(np.clip((budget - gaps) / nat, 0.2, 1.0)) if budget > 0 else 0.2)
     hurry = tl.t > end - 4
-    cs = [(header.fill, 2.8, 0.4)] + [(it.disk_fill, 0.6, 0.25) for it in items]
-    seq(tl, cs, 1.4 if hurry else 2.6, earliest=tl.t + 0.3, minf=0.25)
+    cs = [(header.fill, 2.8, 0.3)] + [(it.disk_fill, 0.6, 0.15) for it in items]
+    seq(tl, cs, 1.0 if hurry else 2.6, earliest=tl.t + (0.15 if hurry else 0.3), minf=0.2)
     tl.leave()
     if next_exists:
-        hold = 0.25 if hurry else 1.0
-        tl.fade(max(tl.t + hold, end - 1.0), 0.7 if hurry else 1.2)
+        hold = 0.2 if hurry else 1.0
+        tl.fade(max(tl.t + hold, end - 1.0), 0.6 if hurry else 1.2)
 
 
 # ---------------- الإخراج ----------------
