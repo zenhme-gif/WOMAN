@@ -21,7 +21,7 @@ outro = list(frames(f'{S}/r2/seg/s2.mp4'))
 ref = outro[min(30, len(outro) - 1)]                      # الشعار بعد انتهاء الانتقال
 m = (np.abs(old_last - ref).max(2) > 60)
 enc = subprocess.Popen(['ffmpeg', '-loglevel', 'error', '-y', '-f', 'rawvideo', '-pix_fmt', 'bgr24', '-s', f'{W}x{H}', '-r', '30', '-i', '-',
-                        '-c:v', 'libx264', '-preset', 'medium', '-crf', '20', '-pix_fmt', 'yuv420p', '-video_track_timescale', '15360', f'{S}/r2/seg/s2fix.mp4'], stdin=subprocess.PIPE)
+                        '-sws_flags', 'accurate_rnd+full_chroma_int+bitexact', '-c:v', 'libx264', '-preset', 'medium', '-crf', '20', '-pix_fmt', 'yuv420p', '-video_track_timescale', '15360', f'{S}/r2/seg/s2fix.mp4'], stdin=subprocess.PIPE)
 ws = []
 for k, f in enumerate(outro):
     w = float(np.clip(np.median(((f - ref) / (old_last - ref + 1e-3))[m]), 0, 1)) if k < 25 else 0.0

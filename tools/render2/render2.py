@@ -204,12 +204,15 @@ class Item:
         a = ink(F, bg); Fc = F.astype(np.float32)
         blue = (B - R > 35) & (f.max(2) - f.min(2) > 30) & low
         n, lab, st, _ = cv2.connectedComponentsWithStats(blue.astype(np.uint8))
-        outline = np.isin(lab, [i for i in range(1, n) if st[i, 2] > 120])
+        outline = np.isin(lab, [i for i in range(1, n) if st[i, 2] > 120 or st[i, 3] > 100])   # وقد ينفصل ضلع الإطار الأيسر
         ys, xs = np.nonzero(outline); bx0, bx1, by0, by1 = xs.min(), xs.max(), ys.min(), ys.max()
         arrow = blue & ~outline & (np.arange(H)[:, None] > by1 - 25)
         yel = (R > 190) & (G > 160) & (R - B > 70) & low
         from scipy import ndimage as ndi
         hull = ndi.binary_fill_holes(cv2.morphologyEx((outline | yel).astype(np.uint8), cv2.MORPH_CLOSE, np.ones((35, 35), np.uint8)) > 0)
+        if hull.sum() < 0.5 * (bx1 - bx0) * (by1 - by0):          # إطار غير مغلق في الصورة: يُؤخذ غلافه المحدَّب
+            pts = cv2.convexHull(np.column_stack(np.nonzero(outline | yel))[:, ::-1].astype(np.int32))
+            hm = np.zeros((H, W), np.uint8); cv2.fillPoly(hm, [pts], 1); hull = hm > 0
         boxtext = (a > 0.05) & hull & ~outline & ~yel & ~(cv2.dilate(outline.astype(np.uint8), np.ones((5, 5), np.uint8)) > 0)
         body = (a > 0.02) & low & ~hull & ~blue & ~yel & (np.arange(H)[:, None] > by1)
         # القرص فوق منتصف الحافة العليا
@@ -327,7 +330,8 @@ def plan_group(tl, header, items, starts, end, keep=True, next_exists=True, stat
             gaps = sum(x[2] for x in body)
             stats.append(float(np.clip((budget - gaps) / nat, 0.2, 1.0)) if budget > 0 else 0.2)
     hurry = tl.t > end - 4
-    cs = [(header.fill, 2.8, 0.3)] + [(it.disk_fill, 0.6, 0.15) for it in items]
+    shown = items if keep else items[-1:]                           # لا يُلوَّن إلا قرص ما بقي على اللوح
+    cs = [(header.fill, 2.8, 0.3)] + [(it.disk_fill, 0.6, 0.15) for it in shown]
     seq(tl, cs, 1.0 if hurry else 2.6, earliest=tl.t + (0.15 if hurry else 0.3), minf=0.2)
     tl.leave()
     if next_exists:
@@ -364,7 +368,8 @@ def render(events, t_from, t_to, out, base=None, audio=None):
             apply_done(canvas, e); done.add(i)
     args = ['ffmpeg', '-loglevel', 'error', '-y', '-f', 'rawvideo', '-pix_fmt', 'bgr24', '-s', f'{W}x{H}', '-r', str(FPS), '-i', '-']
     if audio: args += ['-ss', f'{t_from:.3f}', '-t', f'{t_to - t_from:.3f}', '-i', audio, '-map', '0:v', '-map', '1:a', '-c:a', 'aac', '-b:a', '192k']
-    args += ['-c:v', 'libx264', '-preset', 'medium', '-crf', '20', '-pix_fmt', 'yuv420p', '-video_track_timescale', '15360', '-movflags', '+faststart', out]
+    args += ['-sws_flags', 'accurate_rnd+full_chroma_int+bitexact',      # بلا هذا يُعتم اللوح 4 درجات عند التحويل إلى yuv
+             '-c:v', 'libx264', '-preset', 'medium', '-crf', '20', '-pix_fmt', 'yuv420p', '-video_track_timescale', '15360', '-movflags', '+faststart', out]
     enc = subprocess.Popen(args, stdin=subprocess.PIPE)
     n0, n1 = int(round(t_from * FPS)), int(round(t_to * FPS))
     for n in range(n0, n1):
