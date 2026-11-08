@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>لعبة أشهر السنة</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@600;800&family=Tajawal:wght@500;700;800&display=swap">
+<style>
+/* Layout: one centered play column; the year is a 6×2 strip of season-colored months that recurs as the game's teaching device */
+:root{
+  color-scheme: light;
+  --ground:#EDF4FF;
+  --card:#FFFFFF;
+  --ink:#1C2541;
+  --muted:#4A5578;
+  --line:#D5E0F2;
+  --sun:#FFB627;
+  --right:#1E8A4C;
+  --right-t:#E2F5EA;
+  --wrong:#C93636;
+  --wrong-t:#FCE6E6;
+  --winter:#2F6FDB; --winter-t:#E3EDFC;
+  --spring:#1E8A4C; --spring-t:#E2F5EA;
+  --summer:#C2410C; --summer-t:#FDEBDF;
+  --autumn:#8A5A1F; --autumn-t:#F5EBDD;
+  --display:'Baloo Bhaijaan 2', 'Tajawal', system-ui, sans-serif;
+  --body:'Tajawal', system-ui, sans-serif;
+}
+*{box-sizing:border-box}
+html,body{min-height:100%}
+body{
+  background:var(--ground); color:var(--ink); font-family:var(--body); font-size:18px;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));
+  padding-right:max(16px, env(safe-area-inset-right, 0px));
+  padding-block:20px 32px;
+}
+.app{max-width:680px; margin:0 auto; display:flex; flex-direction:column; gap:18px}
+section{display:flex; flex-direction:column; gap:18px}
+h1,h2,h3{font-family:var(--display); margin:0; text-wrap:balance; line-height:1.2}
+p{margin:0}
+button{font:inherit; color:inherit; cursor:pointer; border:0; background:none}
+button:focus-visible{outline:4px solid var(--sun); outline-offset:3px}
+
+.panel{background:var(--card); border-radius:28px; padding:24px 20px; display:flex; flex-direction:column; gap:18px; box-shadow:0 6px 0 var(--line)}
+
+/* home */
+.hero{align-items:center; text-align:center}
+.hero h1{font-size:clamp(40px, 11vw, 64px); font-weight:800}
+.hero .sub{color:var(--muted); font-weight:700; font-size:19px}
+.btns{display:flex; flex-wrap:wrap; gap:12px; justify-content:center}
+.btn{min-height:60px; padding:0 30px; border-radius:999px; font-family:var(--display); font-weight:800; font-size:24px; display:inline-flex; align-items:center; gap:10px; transition:transform .12s}
+.btn:active{transform:translateY(3px)}
+.btn-main{background:var(--sun); color:var(--ink); box-shadow:0 5px 0 #C98A0B}
+.btn-soft{background:var(--card); color:var(--ink); box-shadow:0 5px 0 var(--line); border:2px solid var(--line)}
+.btn-ink{background:var(--ink); color:#fff; box-shadow:0 5px 0 #0B1022}
+.btn:disabled{opacity:.45; cursor:default}
+
+/* year strip */
+.strip{display:grid; grid-template-columns:repeat(6, minmax(0,1fr)); gap:6px; width:100%}
+.cell{border-radius:14px; padding:8px 2px 9px; color:#fff; display:flex; flex-direction:column; align-items:center; gap:2px; text-align:center; transition:opacity .2s, transform .2s}
+.cell b{font-family:var(--display); font-size:20px; line-height:1}
+.cell span{font-size:13px; font-weight:800; line-height:1.15}
+.s0{background:var(--winter)} .s1{background:var(--spring)} .s2{background:var(--summer)} .s3{background:var(--autumn)}
+.strip.focus .cell{opacity:.28}
+.strip.focus .cell.hl{opacity:1; transform:scale(1.06); box-shadow:0 0 0 3px var(--card), 0 0 0 6px var(--ink)}
+.legend{display:flex; flex-wrap:wrap; gap:8px 16px; justify-content:center; font-size:15px; font-weight:700; color:var(--muted)}
+.legend i{display:inline-block; width:14px; height:14px; border-radius:4px; vertical-align:-2px; margin-left:6px}
+
+/* learn */
+.learn-grid{display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px}
+.mcard{border-radius:20px; padding:14px 8px; display:flex; flex-direction:column; align-items:center; gap:4px; border:3px solid transparent; text-align:center}
+.mcard .n{width:42px; height:42px; border-radius:50%; color:#fff; display:flex; align-items:center; justify-content:center; font-family:var(--display); font-weight:800; font-size:22px}
+.mcard .nm{font-family:var(--display); font-weight:800; font-size:21px; line-height:1.2}
+.mcard .ss{font-size:14px; font-weight:700}
+.t0{background:var(--winter-t)} .t0 .n{background:var(--winter)} .t0 .ss{color:var(--winter)}
+.t1{background:var(--spring-t)} .t1 .n{background:var(--spring)} .t1 .ss{color:var(--spring)}
+.t2{background:var(--summer-t)} .t2 .n{background:var(--summer)} .t2 .ss{color:var(--summer)}
+.t3{background:var(--autumn-t)} .t3 .n{background:var(--autumn)} .t3 .ss{color:var(--autumn)}
+.mcard.pop{animation:pop .4s}
+@keyframes pop{50%{transform:scale(1.08)}}
+
+/* game */
+.topbar{display:flex; align-items:center; gap:12px}
+.icon-btn{width:48px; height:48px; flex-shrink:0; border-radius:50%; background:var(--card); box-shadow:0 4px 0 var(--line); display:inline-flex; align-items:center; justify-content:center}
+.dots{flex:1; display:flex; gap:6px; justify-content:center; flex-wrap:wrap}
+.dot{width:20px; height:20px; border-radius:50%; background:var(--card); border:3px solid var(--line)}
+.dot.cur{border-color:var(--ink)}
+.dot.ok{background:var(--right); border-color:var(--right)}
+.dot.no{background:var(--wrong); border-color:var(--wrong)}
+.qhead{display:flex; justify-content:space-between; align-items:center; gap:12px}
+.qnum{font-weight:800; color:var(--muted); font-size:16px}
+.speak{display:none; align-items:center; gap:6px; font-weight:800; font-size:16px; padding:8px 14px; border-radius:999px; background:var(--winter-t); color:var(--winter)}
+.can-speak .speak{display:inline-flex}
+.qtext{font-size:clamp(26px, 6.5vw, 34px); font-weight:800}
+.opts{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:12px}
+.opt{min-height:72px; border-radius:20px; background:var(--ground); border:3px solid var(--line); font-family:var(--display); font-weight:800; font-size:clamp(20px, 5.5vw, 26px); padding:8px; transition:transform .12s, background .2s}
+.opt:not(:disabled):hover{border-color:var(--winter)}
+.opt:not(:disabled):active{transform:scale(.97)}
+.opt.right{background:var(--right-t); border-color:var(--right); color:var(--right)}
+.opt.wrong{background:var(--wrong-t); border-color:var(--wrong); color:var(--wrong); animation:shake .35s}
+.opt:disabled{cursor:default}
+@keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+
+.seq{display:flex; flex-wrap:wrap; gap:8px; justify-content:center; align-items:center}
+.chip{border-radius:16px; padding:10px 14px; font-family:var(--display); font-weight:800; font-size:20px; color:#fff}
+.chip.q{background:var(--card); color:var(--ink); border:3px dashed var(--ink); min-width:70px; text-align:center}
+.arrow{color:var(--muted); font-weight:800}
+
+.slots{display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:8px}
+.slot{min-height:84px; border-radius:18px; border:3px dashed var(--line); background:var(--ground); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; padding:4px; font-family:var(--display); font-weight:800; font-size:18px; line-height:1.15}
+.slot small{font-family:var(--body); font-size:14px; color:var(--muted)}
+.slot.filled{border-style:solid; border-color:var(--winter); background:var(--winter-t)}
+.slot.right{border-color:var(--right); background:var(--right-t); color:var(--right)}
+.slot.wrong{border-color:var(--wrong); background:var(--wrong-t); color:var(--wrong)}
+.pool{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; min-height:56px}
+.pool .chip{background:var(--ink); min-height:52px}
+.hint{font-size:16px; color:var(--muted); font-weight:700; text-align:center}
+
+.feedback{border-radius:24px; padding:18px; display:flex; flex-direction:column; gap:14px; align-items:center; text-align:center}
+.feedback.good{background:var(--right-t)}
+.feedback.bad{background:var(--wrong-t)}
+.fb-msg{font-family:var(--display); font-weight:800; font-size:30px}
+.good .fb-msg{color:var(--right)}
+.bad .fb-msg{color:var(--wrong)}
+.fb-ans{font-size:20px; font-weight:800}
+
+/* end */
+.stars{display:flex; gap:10px; justify-content:center}
+.stars svg{width:72px; height:72px}
+.stars svg.on{animation:pop .5s backwards}
+.big-score{font-family:var(--display); font-weight:800; font-size:56px; line-height:1}
+
+@media (max-width:420px){
+  .cell span{font-size:11.5px}
+  .cell b{font-size:17px}
+  .slot{font-size:15px; min-height:76px}
+  .chip{font-size:17px; padding:8px 11px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important; transition:none!important}}
+</style>
+
+<main class="app" dir="rtl" lang="ar">
+
+  <section id="home">
+    <div class="panel hero">
+      <svg width="72" height="72" viewBox="0 0 64 64" aria-hidden="true"><rect x="6" y="12" width="52" height="46" rx="10" fill="#FFFFFF" stroke="#1C2541" stroke-width="4"/><path d="M6 24h52" stroke="#1C2541" stroke-width="4"/><rect x="6" y="12" width="52" height="12" rx="6" fill="#FFB627"/><path d="M20 6v12M44 6v12" stroke="#1C2541" stroke-width="5" stroke-linecap="round"/><circle cx="22" cy="36" r="4" fill="#2F6FDB"/><circle cx="32" cy="36" r="4" fill="#1E8A4C"/><circle cx="42" cy="36" r="4" fill="#C2410C"/><circle cx="22" cy="47" r="4" fill="#8A5A1F"/><circle cx="32" cy="47" r="4" fill="#2F6FDB"/></svg>
+      <h1>أشهر السنة</h1>
+      <p class="sub">لعبة أسئلة للصف الثاني عن ترتيب الأشهر وأرقامها</p>
+      <div class="strip" id="homeStrip"></div>
+      <div class="legend">
+        <span><i style="background:var(--winter)"></i>الشتاء</span>
+        <span><i style="background:var(--spring)"></i>الربيع</span>
+        <span><i style="background:var(--summer)"></i>الصيف</span>
+        <span><i style="background:var(--autumn)"></i>الخريف</span>
+      </div>
+      <div class="btns">
+        <button class="btn btn-main" id="playBtn">ابدأ اللعب</button>
+        <button class="btn btn-ink" id="numBtn">أسئلة الأرقام</button>
+        <button class="btn btn-soft" id="learnBtn">تعلّم الأشهر</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="learn" hidden>
+    <div class="topbar">
+      <button class="icon-btn" data-home aria-label="الرجوع إلى البداية"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1C2541" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7M5 10v10h14V10"/></svg></button>
+      <h2 style="font-size:30px">تعلّم الأشهر بالترتيب</h2>
+    </div>
+    <div class="panel">
+      <p class="hint">تبدأ السنة بشهر كانون الثاني وتنتهي بشهر كانون الأول. <span class="speak-note">اضغط على أي شهر لتسمع اسمه.</span></p>
+      <div class="learn-grid" id="learnGrid"></div>
+      <div class="btns"><button class="btn btn-main" id="learnPlay">أنا جاهز، لنلعب</button></div>
+    </div>
+  </section>
+
+  <section id="game" hidden>
+    <div class="topbar">
+      <button class="icon-btn" data-home aria-label="الرجوع إلى البداية"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1C2541" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7M5 10v10h14V10"/></svg></button>
+      <div class="dots" id="dots" aria-hidden="true"></div>
+      <button class="icon-btn" id="muteBtn" aria-label="إيقاف الصوت" aria-pressed="false"><svg id="muteIcon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1C2541" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path class="wave" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/></svg></button>
+    </div>
+    <div class="panel">
+      <div class="qhead">
+        <p class="qnum" id="qnum"></p>
+        <button class="speak" id="speakBtn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 9a4 4 0 0 1 0 6"/></svg>اسمع السؤال</button>
+      </div>
+      <h2 class="qtext" id="qtext"></h2>
+      <div id="qbody" style="display:flex; flex-direction:column; gap:16px"></div>
+      <div class="feedback" id="feedback" hidden>
+        <p class="fb-msg" id="fbMsg"></p>
+        <p class="fb-ans" id="fbAns"></p>
+        <div class="strip focus" id="fbStrip"></div>
+        <button class="btn btn-ink" id="nextBtn">السؤال التالي</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="end" hidden>
+    <div class="panel hero">
+      <div class="stars" id="stars"></div>
+      <h1 id="endTitle" style="font-size:44px"></h1>
+      <p class="big-score" id="endScore"></p>
+      <p class="sub" id="endSub"></p>
+      <div class="btns">
+        <button class="btn btn-main" id="againBtn">العب مرة أخرى</button>
+        <button class="btn btn-soft" id="endLearn">راجع الأشهر</button>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+const M = ['كانون الثاني','شباط','آذار','نيسان','أيار','حزيران','تموز','آب','أيلول','تشرين الأول','تشرين الثاني','كانون الأول'];
+const SEASON = [0,0,1,1,1,2,2,2,3,3,3,0];
+const SEASON_NAME = ['الشتاء','الربيع','الصيف','الخريف'];
+const ORD = ['الأول','الثاني','الثالث','الرابع','الخامس','السادس','السابع','الثامن','التاسع','العاشر','الحادي عشر','الثاني عشر'];
+let ROUND = 10, mode = 'mix';
+const $ = id => document.getElementById(id);
+const ar = n => String(n).replace(/\d/g, d => '٠١٢٣٤٥٦٧٨٩'[d]);
+const rnd = n => Math.floor(Math.random() * n);
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = rnd(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const pick = a => a[rnd(a.length)];
+
+/* ---------- sound & speech ---------- */
+let actx = null, muted = false, arVoice = null;
+function tone(freqs){
+  if (muted) return;
+  try{
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    freqs.forEach((f, i) => {
+      const o = actx.createOscillator(), g = actx.createGain(), t = actx.currentTime + i * 0.12;
+      o.type = 'triangle'; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.22, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+      o.connect(g).connect(actx.destination); o.start(t); o.stop(t + 0.32);
+    });
+  }catch(e){}
+}
+function loadVoices(){
+  try{
+    const v = speechSynthesis.getVoices();
+    arVoice = v.find(x => /^ar/i.test(x.lang)) || null;
+    document.body.classList.toggle('can-speak', !!arVoice);
+  }catch(e){}
+}
+try{ if ('speechSynthesis' in window){ speechSynthesis.onvoiceschanged = loadVoices; loadVoices(); } }catch(e){}
+function speak(text){
+  if (!arVoice || muted) return;
+  try{ speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.voice = arVoice; u.lang = arVoice.lang; u.rate = 0.85; speechSynthesis.speak(u); }catch(e){}
+}
+
+/* ---------- views ---------- */
+function show(id){
+  ['home','learn','game','end'].forEach(s => $(s).hidden = s !== id);
+  window.scrollTo(0, 0);
+}
+function renderStrip(el, focus){
+  el.innerHTML = '';
+  M.forEach((m, i) => {
+    const c = document.createElement('div');
+    c.className = 'cell s' + SEASON[i] + (focus && focus.includes(i) ? ' hl' : '');
+    c.innerHTML = '<b>' + ar(i + 1) + '</b><span>' + m + '</span>';
+    el.appendChild(c);
+  });
+}
+renderStrip($('homeStrip'));
+
+const grid = $('learnGrid');
+M.forEach((m, i) => {
+  const b = document.createElement('button');
+  b.className = 'mcard t' + SEASON[i];
+  b.innerHTML = '<span class="n">' + ar(i + 1) + '</span><span class="nm">' + m + '</span><span class="ss">' + SEASON_NAME[SEASON[i]] + '</span>';
+  b.setAttribute('aria-label', 'الشهر ' + ORD[i] + ': ' + m);
+  b.onclick = () => { b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); speak(m); tone([440 + i * 30]); };
+  grid.appendChild(b);
+});
+
+/* ---------- question makers ---------- */
+function monthOpts(correct){
+  const near = shuffle([correct - 1, correct + 1, correct - 2, correct + 2, correct + 3, correct - 3].filter(i => i >= 0 && i < 12));
+  return shuffle([correct, ...near.slice(0, 3)]).map(i => ({ label: M[i], value: i }));
+}
+const G = {
+  after(){ const i = rnd(11), a = i + 1;
+    return { kind:'choice', text:`ما الشهر الذي يأتي بعد شهر ${M[i]}؟`, options:monthOpts(a), answer:a, answerLabel:M[a], focus:[i, a] }; },
+  before(){ const i = 1 + rnd(11), a = i - 1;
+    return { kind:'choice', text:`ما الشهر الذي يأتي قبل شهر ${M[i]}؟`, options:monthOpts(a), answer:a, answerLabel:M[a], focus:[a, i] }; },
+  ordinal(){ const a = rnd(12);
+    return { kind:'choice', text:`ما الشهر ${ORD[a]} في السنة؟`, options:monthOpts(a), answer:a, answerLabel:M[a], focus:[a] }; },
+  numberOf(){ const i = rnd(12);
+    const near = shuffle([i - 1, i + 1, i - 2, i + 2, i + 3].filter(n => n >= 0 && n < 12)).slice(0, 3);
+    return { kind:'choice', text:`شهر ${M[i]} هو الشهر رقم كم في السنة؟`, options:shuffle([i, ...near]).map(n => ({ label:ar(n + 1), value:n })), answer:i, answerLabel:'رقم ' + ar(i + 1), focus:[i] }; },
+  between(){ const i = 1 + rnd(10);
+    return { kind:'choice', text:`ما الشهر الذي يقع بين ${M[i - 1]} و${M[i + 1]}؟`, options:monthOpts(i), answer:i, answerLabel:M[i], focus:[i - 1, i, i + 1] }; },
+  missing(){ const s = rnd(9), miss = s + 1 + rnd(2), seq = [s, s + 1, s + 2, s + 3];
+    return { kind:'choice', text:'ما الشهر الناقص؟', seq, miss, options:monthOpts(miss), answer:miss, answerLabel:M[miss], focus:seq,
+      say:'ما الشهر الناقص؟ ' + seq.map(i => i === miss ? 'ماذا' : M[i]).join('، ') }; },
+  tf(){ const i = 1 + rnd(10), truth = Math.random() < 0.5, y = truth ? i - 1 : i + 1;
+    return { kind:'choice', text:`شهر ${M[i]} يأتي بعد شهر ${M[y]}. صح أم خطأ؟`, options:[{label:'صح', value:1}, {label:'خطأ', value:0}], answer:truth ? 1 : 0,
+      answerLabel: truth ? `صح، ${M[i]} بعد ${M[y]}` : `خطأ، ${M[i]} قبل ${M[y]}`, focus:[i, y] }; },
+  firstLast(){ const first = Math.random() < 0.5, a = first ? 0 : 11;
+    const opts = first ? [0, 1, 11, 2] : [11, 10, 0, 9];
+    return { kind:'choice', text: first ? 'ما أول شهر في السنة؟' : 'ما آخر شهر في السنة؟', options:shuffle(opts).map(i => ({ label:M[i], value:i })), answer:a, answerLabel:M[a], focus:[a] }; },
+  count(){
+    return { kind:'choice', text:'كم شهراً في السنة؟', options:shuffle([12, 10, 7, 30]).map(n => ({ label:ar(n), value:n })), answer:12, answerLabel:'١٢ شهراً', focus:M.map((_, i) => i) }; },
+  order(){ const s = rnd(9), items = [s, s + 1, s + 2, s + 3];
+    return { kind:'order', text:'رتّب هذه الأشهر حسب ترتيبها في السنة', items, answerLabel:items.map(i => M[i]).join('، ثم '), focus:items }; },
+  numToMonth(){ const a = rnd(12);
+    return { kind:'choice', text:`ما الشهر رقم ${ar(a + 1)}؟`, options:monthOpts(a), answer:a, answerLabel:M[a], focus:[a] }; },
+  numAfter(){ const i = rnd(11), a = i + 1;
+    return { kind:'choice', text:`ما رقم الشهر الذي يأتي بعد شهر ${M[i]}؟`, options:numOpts(a), answer:a, answerLabel:'رقم ' + ar(a + 1) + '، وهو ' + M[a], focus:[i, a] }; },
+  numBefore(){ const i = 1 + rnd(11), a = i - 1;
+    return { kind:'choice', text:`ما رقم الشهر الذي يأتي قبل شهر ${M[i]}؟`, options:numOpts(a), answer:a, answerLabel:'رقم ' + ar(a + 1) + '، وهو ' + M[a], focus:[a, i] }; },
+  numTf(){ const i = rnd(12), truth = Math.random() < 0.5;
+    const n = truth ? i : pick([i - 1, i + 1].filter(x => x >= 0 && x < 12));
+    return { kind:'choice', text:`شهر ${M[i]} هو الشهر رقم ${ar(n + 1)}. صح أم خطأ؟`, options:[{label:'صح', value:1}, {label:'خطأ', value:0}], answer:truth ? 1 : 0,
+      answerLabel:(truth ? 'صح' : 'خطأ') + `، ${M[i]} رقمه ${ar(i + 1)}`, focus:[i] }; },
+  numBetween(){ const i = 1 + rnd(10);
+    return { kind:'choice', text:`ما الشهر الذي رقمه بين ${ar(i)} و${ar(i + 2)}؟`, options:monthOpts(i), answer:i, answerLabel:M[i] + '، رقمه ' + ar(i + 1), focus:[i - 1, i, i + 1] }; }
+};
+function numOpts(correct){
+  const near = shuffle([correct - 1, correct + 1, correct - 2, correct + 2, correct + 3].filter(n => n >= 0 && n < 12)).slice(0, 3);
+  return shuffle([correct, ...near]).map(n => ({ label:ar(n + 1), value:n }));
+}
+function buildRound(m){
+  const list = m === 'num'
+    ? [G.numToMonth, G.numToMonth, G.numberOf, G.numberOf, G.numAfter, G.numBefore, G.numTf, G.numBetween, G.ordinal, G.count]
+    : [G.after, G.before, G.ordinal, G.numberOf, G.between, G.missing, G.tf, G.order,
+       Math.random() < 0.5 ? G.firstLast : G.count, G.numToMonth, pick([G.numAfter, G.numBefore]), pick([G.numTf, G.numBetween])];
+  const seen = new Set();
+  return shuffle(list).map(f => { let q, t = 0; do { q = f(); } while (seen.has(q.text) && ++t < 10); seen.add(q.text); return q; });
+}
+
+/* ---------- game ---------- */
+let round = [], qi = 0, score = 0, results = [], answered = false;
+
+function startGame(){
+  round = buildRound(mode); ROUND = round.length; qi = 0; score = 0; results = [];
+  show('game'); renderQ();
+}
+function renderDots(){
+  const d = $('dots'); d.innerHTML = '';
+  for (let i = 0; i < ROUND; i++){
+    const s = document.createElement('span');
+    s.className = 'dot' + (results[i] === true ? ' ok' : results[i] === false ? ' no' : i === qi ? ' cur' : '');
+    d.appendChild(s);
+  }
+}
+function renderQ(){
+  const q = round[qi]; answered = false;
+  renderDots();
+  $('qnum').textContent = 'السؤال ' + ar(qi + 1) + ' من ' + ar(ROUND);
+  $('qtext').textContent = q.text;
+  $('feedback').hidden = true;
+  const body = $('qbody'); body.innerHTML = '';
+
+  if (q.seq){
+    const row = document.createElement('div'); row.className = 'seq';
+    q.seq.forEach((i, k) => {
+      const c = document.createElement('span');
+      c.className = 'chip ' + (i === q.miss ? 'q' : 's' + SEASON[i]);
+      c.textContent = i === q.miss ? '؟' : M[i];
+      row.appendChild(c);
+      if (k < q.seq.length - 1){ const a = document.createElement('span'); a.className = 'arrow'; a.textContent = '←'; row.appendChild(a); }
+    });
+    body.appendChild(row);
+  }
+
+  if (q.kind === 'choice'){
+    const opts = document.createElement('div'); opts.className = 'opts';
+    q.options.forEach(o => {
+      const b = document.createElement('button');
+      b.className = 'opt'; b.textContent = o.label; b.dataset.v = o.value;
+      b.onclick = () => choose(b, o.value);
+      opts.appendChild(b);
+    });
+    body.appendChild(opts);
+  } else {
+    renderOrder(q, body);
+  }
+  const first = body.querySelector('button'); if (first) first.focus({ preventScroll:true });
+}
+
+function choose(btn, v){
+  if (answered) return; answered = true;
+  const q = round[qi], ok = v === q.answer;
+  $('qbody').querySelectorAll('.opt').forEach(b => {
+    b.disabled = true;
+    if (+b.dataset.v === q.answer) b.classList.add('right');
+  });
+  if (!ok) btn.classList.add('wrong');
+  finish(ok);
+}
+
+function renderOrder(q, body){
+  let placed = [];
+  let pool = shuffle(q.items);
+  while (pool.join() === q.items.join()) pool = shuffle(q.items);
+
+  const slots = document.createElement('div'); slots.className = 'slots';
+  const poolEl = document.createElement('div'); poolEl.className = 'pool';
+  const hint = document.createElement('p'); hint.className = 'hint'; hint.textContent = 'اضغط على الأشهر بالترتيب: الأول ثم الذي بعده. اضغط على خانة لتفريغها.';
+  const check = document.createElement('button'); check.className = 'btn btn-main'; check.textContent = 'تحقّق';
+  const wrap = document.createElement('div'); wrap.className = 'btns'; wrap.appendChild(check);
+
+  function draw(){
+    slots.innerHTML = ''; poolEl.innerHTML = '';
+    for (let k = 0; k < 4; k++){
+      const s = document.createElement('button');
+      s.className = 'slot' + (placed[k] !== undefined ? ' filled' : '');
+      s.innerHTML = placed[k] !== undefined ? M[placed[k]] : '<small>' + ar(k + 1) + '</small>';
+      s.setAttribute('aria-label', 'الخانة ' + ar(k + 1) + (placed[k] !== undefined ? ': ' + M[placed[k]] : ' فارغة'));
+      s.onclick = () => { if (answered || placed[k] === undefined) return; placed.splice(k, 1); draw(); };
+      slots.appendChild(s);
+    }
+    pool.filter(i => !placed.includes(i)).forEach(i => {
+      const c = document.createElement('button');
+      c.className = 'chip'; c.textContent = M[i];
+      c.onclick = () => { if (answered) return; placed.push(i); tone([600]); draw(); };
+      poolEl.appendChild(c);
+    });
+    check.disabled = placed.length < 4 || answered;
+  }
+  check.onclick = () => {
+    if (answered || placed.length < 4) return; answered = true;
+    const ok = placed.every((v, k) => v === q.items[k]);
+    [...slots.children].forEach((s, k) => s.classList.add(placed[k] === q.items[k] ? 'right' : 'wrong'));
+    check.disabled = true; hint.hidden = true;
+    finish(ok);
+  };
+  body.append(slots, poolEl, hint, wrap);
+  draw();
+}
+
+function finish(ok){
+  const q = round[qi];
+  results[qi] = ok; if (ok) score++;
+  renderDots();
+  tone(ok ? [523, 659, 784] : [330, 262]);
+  const fb = $('feedback');
+  fb.className = 'feedback ' + (ok ? 'good' : 'bad');
+  $('fbMsg').textContent = ok ? pick(['أحسنت!', 'رائع!', 'ممتاز يا بطل!', 'إجابة صحيحة!', 'برافو!']) : 'حاول أن تتذكّر';
+  $('fbAns').textContent = ok ? (q.kind === 'order' ? q.answerLabel : 'انظر إلى مكانه في السنة:') : 'الإجابة الصحيحة: ' + q.answerLabel;
+  renderStrip($('fbStrip'), q.focus);
+  $('nextBtn').textContent = qi === ROUND - 1 ? 'شاهد النتيجة' : 'السؤال التالي';
+  fb.hidden = false;
+  if (ok) speak($('fbMsg').textContent); else speak('الإجابة الصحيحة ' + q.answerLabel);
+  $('nextBtn').focus({ preventScroll:true });
+  fb.scrollIntoView({ behavior:'smooth', block:'nearest' });
+}
+
+const STAR = on => `<svg viewBox="0 0 24 24" class="${on ? 'on' : ''}" aria-hidden="true"><path d="M12 2.5l2.9 6 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.2 1.3-6.6L2.5 9.3l6.6-.8z" fill="${on ? '#FFB627' : '#D5E0F2'}" stroke="${on ? '#C98A0B' : '#B8C6DE'}" stroke-width="1.2" stroke-linejoin="round"/></svg>`;
+function showEnd(){
+  const n = score >= 9 ? 3 : score >= 6 ? 2 : 1;
+  $('stars').innerHTML = [0, 1, 2].map(i => STAR(i < n)).join('');
+  [...$('stars').children].forEach((s, i) => s.style.animationDelay = (i * 0.25) + 's');
+  $('endTitle').textContent = n === 3 ? 'بطل الأشهر!' : n === 2 ? 'عمل جميل!' : 'بداية جيدة!';
+  $('endScore').textContent = ar(score) + ' من ' + ar(ROUND);
+  $('endSub').textContent = n === 3 ? 'أنت تعرف أشهر السنة جيداً.' : 'راجع الأشهر ثم العب مرة أخرى لتجمع ثلاث نجوم.';
+  show('end');
+  tone(n === 3 ? [523, 659, 784, 1047] : [523, 659]);
+  speak($('endTitle').textContent + ' ' + ar(score) + ' من ' + ar(ROUND));
+}
+
+/* ---------- wiring ---------- */
+$('playBtn').onclick = () => { mode = 'mix'; startGame(); };
+$('numBtn').onclick = () => { mode = 'num'; startGame(); };
+$('learnPlay').onclick = () => { mode = 'mix'; startGame(); };
+$('againBtn').onclick = startGame;
+$('learnBtn').onclick = () => show('learn');
+$('endLearn').onclick = () => show('learn');
+document.querySelectorAll('[data-home]').forEach(b => b.onclick = () => { try{ speechSynthesis.cancel(); }catch(e){} show('home'); });
+$('nextBtn').onclick = () => { qi++; if (qi >= ROUND) showEnd(); else { renderQ(); window.scrollTo({ top:0, behavior:'smooth' }); } };
+$('speakBtn').onclick = () => { const q = round[qi]; speak(q.say || q.text); };
+$('muteBtn').onclick = () => {
+  muted = !muted;
+  $('muteBtn').setAttribute('aria-pressed', String(muted));
+  $('muteBtn').setAttribute('aria-label', muted ? 'تشغيل الصوت' : 'إيقاف الصوت');
+  $('muteIcon').querySelector('.wave').style.display = muted ? 'none' : '';
+  if (muted){ try{ speechSynthesis.cancel(); }catch(e){} }
+};
+</script>
+
+</html>
