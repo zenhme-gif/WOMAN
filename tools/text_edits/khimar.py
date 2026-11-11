@@ -22,8 +22,11 @@ for it in its:
     bots.append(int(it.outline.y1))
 print('disks', disks, 'bots', bots, 'lines', [len(it.lines) for it in its], 'boxtext', [len(it.boxtext) for it in its], flush=True)
 if len(sys.argv) > 1 and sys.argv[1] == 'dry': sys.exit()
-M = SC.measure(V, A, B, refs, disks, bots, True)
-print(json.dumps(M, ensure_ascii=False, default=float), flush=True)
+if 'reuse' in sys.argv[1:]:
+    M = [json.loads(l) for l in open(f'{S}/regroup/l1_e3.log') if l.startswith('{')][-1]
+else:
+    M = SC.measure(V, A, B, refs, disks, bots, True)
+    print(json.dumps(M, ensure_ascii=False, default=float), flush=True)
 tl = SC.plan(hd, its, A, B, M, True, F)
 G.R.render(tl.ev, A, B, f'{S}/regroup/l1_e3.mp4')
 print('done')

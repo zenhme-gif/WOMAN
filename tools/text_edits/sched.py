@@ -101,9 +101,10 @@ def measure(video, A, B, refs, disks, box_bottoms, keep):
             if lm < 30: continue
             run = np.convolve((L[i_ring:] > 0.12 * lm).astype(int), np.ones(8, int), 'valid')   # حبر ثابت ربع ثانية (لا رأس القلم العابر)
             i0 = i_ring + (int(np.argmax(run == 8)) if (run == 8).any() else int(np.argmax(L[i_ring:] > 0.04 * lm)))
-            i85 = i_ring + int(np.argmax(L[i_ring:] > 0.85 * lm))
-            if lines_t: i0 = max(i0, prev85)                   # القلم فوق السطر التالي أثناء كتابة سابقه: لا يبدأ قبل اكتمال سابقه
-            prev85 = i85
+            # القلم يمر فوق السطر التالي أثناء كتابة سابقه: لا يبدأ سطر قبل مضي نصف المدة الطبيعية لكتابة سابقه
+            if lines_t: i0 = max(i0, prev_i0 + int(0.5 * prev_w / 165.0 * FPS))
+            cols = np.nonzero(masks[k][bands[k][j][0]:bands[k][j][1]].any(0))[0]
+            prev_i0, prev_w = i0, (int(cols.max() - cols.min()) if len(cols) else 0)
             lines_t.append((T(i0), T(i_ring + int(np.argmax(L[i_ring:] > 0.96 * lm)))))
             bnds.append(bands[k][j])
         out['items'].append(dict(lines=lines_t, bands=bnds, ring=T(i_ring), body0=None if i_b0 is None else T(i_b0), body1=None if i_b1 is None else T(i_b1),
@@ -130,7 +131,7 @@ def resplit(strokes, bands):
     for j in range(len(bands)):
         a = A.copy(); a[:max(0, cuts[j])] = 0; a[min(H, cuts[j + 1]):] = 0
         st = R.wipe_rtl(a, C)
-        out.append(None if st.empty else st)
+        out.append(None if (st is None or st.empty) else st)
     return out
 
 
@@ -150,8 +151,14 @@ def plan(header, items, A, B, M, keep, fade_start):
         lt = m.get('lines') or []
         if ls and lt:                                 # أسطر الجديد على حدود أسطر الأصل، وكل سطر يبدأ حين بدأ في الأصل
             ls = resplit(ls, m['bands'])
-            for j, (st_, (a0, a1)) in enumerate(zip(ls, lt)):
-                end = min(a1, lt[j + 1][0] - 0.3) if j + 1 < len(lt) else min(a1, m['body1'])
+            win = [(a0, min(a1, lt[j + 1][0] - 0.3) if j + 1 < len(lt) else min(a1, m['body1'])) for j, (a0, a1) in enumerate(lt)]
+            nat = [R.text_nat(x) if x is not None else 0 for x in ls]
+            if any(n and (e - a) < n / 1.8 for (a, e), n in zip(win, nat)) and sum(nat):
+                # بدايات مقيسة تضغط سطراً ضغطاً شديداً: تُوزَّع نافذة الكتابة كلها بحسب أطوال الأسطر
+                s0, e1 = win[0][0], win[-1][1]; T = max(e1 - s0 - 0.25 * (len(ls) - 1), 0.6 * len(ls)); t = s0; win = []
+                for n in nat:
+                    d = T * n / sum(nat); win.append((t, t + d)); t += d + 0.25
+            for st_, (a0, end) in zip(ls, win):
                 start = max(a0, tl.t + 0.2)
                 if st_ is not None: tl.draw(st_, max(0.6, end - start), earliest=a0, gap=0.2)
         else:

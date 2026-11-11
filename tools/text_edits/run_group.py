@@ -16,8 +16,11 @@ for it in its:
 # أسفل إطار كل صندوق في الأصل: أول صف تحت القرص يبدأ بعده الشرح؛ تقريب: أسفل الإطار من عنصر الصفحة
 for k, it in enumerate(its):
     if it.outline is not None and not it.outline.empty: bots[k] = int(it.outline.y1)
-M = SC.measure(cfg['video'], cfg['A'], cfg['B'], refs, disks, bots, cfg.get('keep', False))
-print(json.dumps(M, ensure_ascii=False, default=float))
+if 'reuse' in sys.argv[2:]:                       # القياس من السجل السابق (يُعاد الرسم وحده)
+    M = [json.loads(l) for l in open(cfg['out'].replace('.mp4', '.log')) if l.startswith('{')][-1]
+else:
+    M = SC.measure(cfg['video'], cfg['A'], cfg['B'], refs, disks, bots, cfg.get('keep', False))
+    print(json.dumps(M, ensure_ascii=False, default=float), flush=True)
 tl = SC.plan(hd, its, cfg['A'], cfg['B'], M, cfg.get('keep', False), cfg['F'])
 G.R.render(tl.ev, cfg['A'], cfg['B'], cfg['out'])
 print('done', cfg['out'])

@@ -20,10 +20,10 @@ def ranges(k):
     out = []; prev = 0
     if k == 1:
         import intro_mark as IM
-        im = IM.IntroMark(); out.append((im.n0, im.n1, im.get, None))
+        im = IM.IntroMark(); out.append((im.n0 / 30, im.n1 / 30, im.get, None))
     for name, A, F, B in GROUPS[k]:
-        a = max(n(A), prev); b = n(B); prev = b
-        out.append((a, b, FF.FadedClip(f'{S}/regroup/{name}.mp4', A, SRC[k], F - 0.3, B).get, name))
+        a = max(A, prev); prev = B
+        out.append((a, B, FF.FadedClip(f'{S}/regroup/{name}.mp4', A, SRC[k], F - 0.3, B).get, name))
     return out
 
 
@@ -36,6 +36,7 @@ if __name__ == '__main__':
         os.makedirs(f'{S}/splice/k4_{k}', exist_ok=True)
         jobs = []
         for a, b, _, name in ranges(k):
+            a, b = n(a), n(b)
             out = f'{S}/splice/k4_{k}/{a:06d}_{b:06d}.mp4'
             jobs.append(f'python3 {S}/v4k/compose.py {k} {new1080} {a} {b} {out} > {out}.log 2>&1')
         open(f'{S}/splice/k4_{k}/jobs.sh', 'w').write('\n'.join(jobs) + '\n')
@@ -46,7 +47,7 @@ if __name__ == '__main__':
                   '-pix_fmt', 'yuv420p', '-video_track_timescale', '15360']
         patches = []
         for a, b, _, name in ranges(k):
-            c = SP.Clip(f'{S}/splice/k4_{k}/{a:06d}_{b:06d}.mp4', a / 30)
+            c = SP.Clip(f'{S}/splice/k4_{k}/{n(a):06d}_{n(b):06d}.mp4', n(a) / 30)
             patches.append((a, b, c.get))
         os.makedirs(f'{S}/v4k/final_new', exist_ok=True)
         SP.run(f'{S}/v4k/final/{NAME4[k]}', patches, f'{S}/v4k/final_new/{NAME4[k]}', f'{S}/splice/w4k_{k}')

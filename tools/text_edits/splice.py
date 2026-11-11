@@ -8,14 +8,15 @@ ENC = ['-sws_flags', 'accurate_rnd+full_chroma_int+bitexact', '-c:v', 'libx264',
        '-pix_fmt', 'yuv420p', '-video_track_timescale', '15360']
 
 
-def keyframes(src):
+def packets(src):
+    """طوابع الإطارات مرتبة، وأرقام الإطارات المفتاحية بترتيبها (لا بضرب الزمن في 30: قد تنزاح الطوابع)."""
     out = subprocess.run(['ffprobe', '-v', 'error', '-select_streams', 'v', '-show_entries', 'packet=pts_time,flags', '-of', 'csv=p=0', src],
                          capture_output=True, text=True).stdout
-    ks = []
-    for l in out.splitlines():
-        p = l.split(',')
-        if len(p) >= 2 and 'K' in p[1]: ks.append(float(p[0]))
-    return sorted(ks)
+    rows = [l.split(',') for l in out.splitlines() if l.strip()]
+    pts = sorted(float(r[0]) for r in rows)
+    ks = sorted(float(r[0]) for r in rows if len(r) > 1 and 'K' in r[1])
+    idx = {p: i for i, p in enumerate(pts)}
+    return pts, [idx[k] for k in ks]
 
 
 def nframes(p):
@@ -43,22 +44,27 @@ class Clip:
 
 
 def run(src, patches, out, work):
+    """patches: [(A, B, get)] بالزمن؛ تُحل محل إطارات الأصل التي طابعها في [A, B) بالترتيب،
+    ويُعطى get رقماً افتراضياً round(A·30)+k للإطار k من بداية الرقعة."""
+    import bisect
     os.makedirs(work, exist_ok=True)
-    ks = keyframes(src); kn = [int(round(k * FPS)) for k in ks]
-    total = nframes(src)
-    # حدود القطع: أقرب إطار مفتاحي قبل الرقعة وبعدها
+    pts, kn = packets(src); total = len(pts)
+    P = []
+    for A, B, g in patches:
+        a = bisect.bisect_left(pts, A - 1e-4); b = bisect.bisect_left(pts, B - 1e-4)
+        P.append((a, b, int(round(A * FPS)), g))
     spans = []
-    for n0, n1, _ in patches:
-        a = max([k for k in kn if k <= n0]); b = min([k for k in kn if k >= n1] + [total])
+    for a0, b0, _, _ in P:
+        a = max([k for k in kn if k <= a0]); b = min([k for k in kn if k >= b0] + [total])
         spans.append([a, b])
     spans.sort(); merged = []
     for a, b in spans:
         if merged and a <= merged[-1][1]: merged[-1][1] = max(merged[-1][1], b)
         else: merged.append([a, b])
     cuts = sorted(set([x for ab in merged for x in ab if 0 < x < total]))
-    print('spans', [(a / FPS, b / FPS) for a, b in merged], flush=True)
+    print('spans', [(round(pts[a], 2), round(pts[b] if b < total else pts[-1], 2)) for a, b in merged], flush=True)
     subprocess.run(['ffmpeg', '-loglevel', 'error', '-y', '-i', src, '-map', '0:v', '-c', 'copy', '-f', 'segment',
-                    '-segment_times', ','.join(f'{c / FPS - 0.005:.4f}' for c in cuts), '-reset_timestamps', '1', '-segment_format', 'mp4',
+                    '-segment_times', ','.join(f'{pts[c] - 0.004:.4f}' for c in cuts), '-reset_timestamps', '1', '-segment_format', 'mp4',
                     f'{work}/s%03d.mp4'], check=True)
     bounds = [0] + cuts + [total]
     segs = []
@@ -66,7 +72,7 @@ def run(src, patches, out, work):
         p = f'{work}/s{i:03d}.mp4'; nf = nframes(p)
         assert nf == bounds[i + 1] - bounds[i], (p, nf, bounds[i], bounds[i + 1])
         a, b = bounds[i], bounds[i + 1]
-        mine = [(n0, n1, g) for n0, n1, g in patches if n0 < b and n1 > a]
+        mine = [(a0, b0, v0, g) for a0, b0, v0, g in P if a0 < b and b0 > a]
         if not mine: segs.append(p); continue
         q = f'{work}/s{i:03d}p.mp4'
         dec = subprocess.Popen(['ffmpeg', '-loglevel', 'error', '-i', p, '-f', 'rawvideo', '-pix_fmt', 'bgr24', '-'], stdout=subprocess.PIPE)
@@ -78,13 +84,13 @@ def run(src, patches, out, work):
             if len(buf) < W * H * 3: break
             f = np.frombuffer(buf, np.uint8).reshape(H, W, 3)
             g = None
-            for n0, n1, get in mine:
-                if n0 <= n < n1: g = get(n, f); break
+            for a0, b0, v0, get in mine:
+                if a0 <= n < b0: g = get(v0 + (n - a0), f); break
             if g is not None: rep += 1
             enc.stdin.write((f if g is None else g).tobytes()); n += 1
         enc.stdin.close(); enc.wait(); dec.wait()
         assert nframes(q) == b - a, (q, nframes(q), b - a)
-        print(f'segment {a / FPS:.2f}-{b / FPS:.2f}: {b - a} frames, {rep} replaced', flush=True)
+        print(f'segment {pts[a]:.2f}-{(pts[b] if b < total else pts[-1]):.2f}: {b - a} frames, {rep} replaced', flush=True)
         segs.append(q)
     open(f'{work}/list.txt', 'w').write(''.join(f"file '{s}'\n" for s in segs))
     subprocess.run(['ffmpeg', '-loglevel', 'error', '-y', '-f', 'concat', '-safe', '0', '-i', f'{work}/list.txt', '-c', 'copy', f'{work}/v.mp4'], check=True)

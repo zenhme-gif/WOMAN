@@ -25,18 +25,23 @@ def curve(video, t_pre, t_end):
 
 
 class FadedClip(SP.Clip):
+    """قبل الانتقال: إطارات المقطع المعاد رسمه. أثناءه: يُقاس من إطار الأصل نفسه (الذي يُستبدل) لكل قناة
+    عاملُ الإعتام k ونسبةُ بقاء المحتوى c، فيُبنى الإطار الجديد بهما من حالة المقطع الأخيرة."""
     def __init__(self, path, t_start, video, t_fade, t_end):
         super().__init__(path, t_start)
-        cv = curve(video, t_fade - 2 / 30, t_end)
-        self.cv = {n: (c, k) for n, c, k in cv}
         self.nf = int(round(t_fade * 30)) - 2
-        self.state = None
+        self.state = None; self.S0 = None
+        flat = np.abs(PL - np.array([228, 236, 240], np.float32)).max(2) <= 1
+        self.flat = flat
 
     def get(self, n, f):
         if n < self.nf: return super().get(n, f)
+        ff = f.astype(np.float32)
         if self.state is None:
-            self.state = super().get(self.nf, f).astype(np.float32)
-        if n not in self.cv: return None
-        c, k = self.cv[n]
+            self.state = super().get(self.nf, f).astype(np.float32); self.S0 = ff
+            d = self.S0 - PL; self.strong = np.abs(d).max(2) > 40; self.dd = d[self.strong]
+        k = np.median(ff[self.flat] / np.maximum(PL[self.flat], 1), 0)            # لكل قناة
+        x = ff[self.strong] / k - PL[self.strong]
+        c = float(np.clip((x * self.dd).sum() / (self.dd * self.dd).sum(), 0, 1))
         g = (PL + c * (self.state - PL)) * k
         return np.clip(g + 0.5, 0, 255).astype(np.uint8)

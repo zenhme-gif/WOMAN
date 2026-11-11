@@ -9,6 +9,7 @@ S = L.S
 k, SRC, n0, n1, OUT = int(sys.argv[1]), sys.argv[2], int(sys.argv[3]), int(sys.argv[4]), sys.argv[5]
 FPS, W, H = 30, 1920, 1080
 INTRO_END = {1: 27.5, 2: 19.5, 3: 27.51, 4: 15.5}[k]
+import os; INTRO_INK = int(os.environ.get('INTRO_INK', 40))
 DUR = float(subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', SRC], capture_output=True, text=True).stdout)
 OUTRO = DUR - 5.77
 TOL = 24
@@ -27,9 +28,13 @@ def layer_set(t):
     if t < INTRO_END:
         key = ('intro',)
         if key not in _cache:
-            P4 = cv2.imread(f'{S}/hr/pages4k/001.png')
+            P4 = cv2.imread(f'{S}/hr/pages4k/001.png').astype(np.float32)
+            # خلفية الغلاف بلون الصفحة (234،239،242) أفتح من لوح الفيديو (228،236،240): تُعاد إلى لون اللوح، والحبر كما هو
+            cpg = np.array([234, 239, 242], np.float32); cpl = np.array([228, 236, 240], np.float32)
+            a = np.clip(np.abs(P4 - cpg).max(2) / 60.0, 0, 1)[..., None]
+            P4 = np.clip(P4 + (cpl - cpg) * (1 - a) + 0.5, 0, 255).astype(np.uint8)
             d1 = cv2.resize(P4, (W, H), interpolation=cv2.INTER_AREA)
-            _cache.clear(); _cache[key] = [(P4, blur(d1), maxdiff(d1, L.PLATE1) > 40)]
+            _cache.clear(); _cache[key] = [(P4, blur(d1), maxdiff(d1, L.PLATE1) > INTRO_INK)]   # العلامة المائية الباهتة في الغلاف حبرٌ لا يظهر قبل أن يُكتب
         return key, _cache[key]
     if t >= OUTRO: return ('outro',), []
     gs = [g for g in GROUPS if GT[g][0] <= t < GT[g][1]] or [GROUPS[-1]]
