@@ -198,13 +198,16 @@ class Header:
 
 
 class Item:
+    OUT_MIN = (120, 100)        # أصغر عرض/ارتفاع لقطعة إطار؛ يُخفض للشرائح المستخرجة من الفيديو (إطارها متقطّع)
+    BODY_PAD = 0                # هامش تحت الإطار لا يُعد شرحاً
+
     def __init__(self, F, bg, idx, disk_r=34):
         f = F.astype(int); B, G, R = f[..., 0], f[..., 1], f[..., 2]
         low = np.zeros((H, W), bool); low[440:] = True
         a = ink(F, bg); Fc = F.astype(np.float32)
         blue = (B - R > 35) & (f.max(2) - f.min(2) > 30) & low
         n, lab, st, _ = cv2.connectedComponentsWithStats(blue.astype(np.uint8))
-        outline = np.isin(lab, [i for i in range(1, n) if st[i, 2] > 120 or st[i, 3] > 100])   # وقد ينفصل ضلع الإطار الأيسر
+        outline = np.isin(lab, [i for i in range(1, n) if st[i, 2] > self.OUT_MIN[0] or st[i, 3] > self.OUT_MIN[1]])   # وقد ينفصل ضلع الإطار الأيسر
         ys, xs = np.nonzero(outline); bx0, bx1, by0, by1 = xs.min(), xs.max(), ys.min(), ys.max()
         arrow = blue & ~outline & (np.arange(H)[:, None] > by1 - 25)
         yel = (R > 190) & (G > 160) & (R - B > 70) & low
@@ -214,7 +217,8 @@ class Item:
             pts = cv2.convexHull(np.column_stack(np.nonzero(outline | yel))[:, ::-1].astype(np.int32))
             hm = np.zeros((H, W), np.uint8); cv2.fillPoly(hm, [pts], 1); hull = hm > 0
         boxtext = (a > 0.05) & hull & ~outline & ~yel & ~(cv2.dilate(outline.astype(np.uint8), np.ones((5, 5), np.uint8)) > 0)
-        body = (a > 0.02) & low & ~hull & ~blue & ~yel & (np.arange(H)[:, None] > by1)
+        body = (a > 0.02) & low & ~hull & ~blue & ~yel & (np.arange(H)[:, None] > by1 + self.BODY_PAD)
+        if self.BODY_PAD: body &= ~(cv2.dilate((blue | yel).astype(np.uint8), np.ones((7, 7), np.uint8)) > 0)
         # القرص فوق منتصف الحافة العليا
         cx, cy = int(round((bx0 + bx1) / 2)), by0 - int(round(disk_r * 0.63))
         Y, X = np.mgrid[:H, :W]
