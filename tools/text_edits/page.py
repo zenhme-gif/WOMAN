@@ -2,7 +2,7 @@
 python3 page.py K  → يطبع دفعات النشر (مسارات الأجزاء)"""
 import sys, os, re, json, glob
 S = '/tmp/claude-0/-home-user-WOMAN/b60cb907-78a5-579e-bd39-853977c0c146/scratchpad'
-NAME4 = {1: 'lesson01-taharah-wudu-ghusl-4k.mp4', 3: 'lesson03-salah-4k.mp4', 4: 'lesson04-salah-jamaah-4k.mp4'}
+NAME4 = {1: 'lesson01-taharah-wudu-ghusl-4k.mp4', 2: 'lesson02-taharah-hayd-nifas-4k.mp4', 3: 'lesson03-salah-4k.mp4', 4: 'lesson04-salah-jamaah-4k.mp4'}
 AR = str.maketrans('0123456789', '٠١٢٣٤٥٦٧٨٩')
 k = int(sys.argv[1])
 src = f'{S}/v4k/final_new/{NAME4[k]}'
